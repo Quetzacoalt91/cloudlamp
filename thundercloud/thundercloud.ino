@@ -10,15 +10,17 @@ This paragraph must be included in any redistribution.
 #include "FastLED.h"
 
 // How many leds in your strip?
-#define NUM_LEDS 85
+#define NUM_LEDS 150
 #define DATA_PIN 6
 
 
 // Mode enumeration - if you want to add additional party or colour modes, add them here; you'll need to map some IR codes to them later; 
 // and add the modes into the main switch loop
-enum Mode { CLOUD,ACID,OFF,ON,RED,GREEN,BLUE,FADE};
-Mode mode = CLOUD;  
-Mode lastMode = CLOUD;
+enum Mode { CLOUD,ACID,OFF,ON,RED,GREEN,BLUE,
+            CUSTOM1,CUSTOM2,CUSTOM3,CUSTOM4,CUSTOM5,CUSTOM6,CUSTOM7,CUSTOM8,CUSTOM9,
+            CUSTOM10,CUSTOM11,CUSTOM12,CUSTOM13,CUSTOM14,CUSTOM15,CUSTOM16,FADE};
+Mode mode = FADE;  
+Mode lastMode = FADE;
 
 // Mic settings, shouldn't need to adjust these. 
 #define MIC_PIN   0  // Microphone is attached to this analog pin
@@ -31,6 +33,10 @@ int
   vol[SAMPLES];       // Collection of prior volume samples
 int      n, total = 30;
 float average = 0;
+
+int brightness = 255;
+
+bool quick_transition = false;
   
 // used to make basic mood lamp colour fading feature
 int fade_h;
@@ -63,9 +69,9 @@ void receiveEvent(int bytes) {
       Serial.println(received,HEX);
       lastMode = mode;
       switch(received){
-        case 0x3F:
-          mode = ON; break;
-        case 0xBF:
+        case 0x7D:
+          mode = ON; brightness=255; break;
+        case 0xFD:
           mode = OFF; break;
         case 0x2F:
           mode = CLOUD; break;
@@ -73,13 +79,48 @@ void receiveEvent(int bytes) {
           mode = ACID; break;
         case 0x37:
           mode = FADE; break;
-        case 0x9F:
+        case 0xC5:
+          brightness += 10;break;
+        case 0x45:
+          brightness -= 10;break;
+        case 0x5D:
           mode = BLUE; break;
-        case 0x5F:
+        case 0x65:
           mode = GREEN; break;
-        case 0xDF:
+        case 0xE5:
           mode = RED; break;
-        
+        case 0xD5:
+          mode = CUSTOM1; break;
+        case 0x55:
+          mode = CUSTOM2; break;
+        case 0x6D:
+          mode = CUSTOM3; break;
+        case 0xED:
+          mode = CUSTOM4; break;
+        case 0xF5:
+          mode = CUSTOM5; break;
+        case 0x75:
+          mode = CUSTOM6; break;
+        case 0x4D:
+          mode = CUSTOM7; break;
+        case 0xCD:
+          mode = CUSTOM8; break;
+        case 0xC7:
+          mode = CUSTOM9; break;
+        case 0x47:
+          mode = CUSTOM10; break;
+        case 0x87:
+          mode = CUSTOM11; break;
+        case 0x7:
+          mode = CUSTOM12; break;
+        case 0xE7:
+          mode = CUSTOM13; break;
+        case 0x67:
+          mode = CUSTOM14; break;
+        case 0xA7:
+          mode = CUSTOM15; break;
+        case 0x27:
+          mode = CUSTOM16; break;
       }
    }
 
@@ -92,10 +133,26 @@ void loop() {
     case CLOUD: detect_thunder();reset();break;
     case ACID: acid_cloud();reset();break;
     case OFF:reset();break;
-    case ON: constant_lightning();reset();break;
+    case ON: mode = lastMode;break;
     case RED: single_colour(0);break;
     case BLUE: single_colour(160);break;
     case GREEN: single_colour(96);break;
+    case CUSTOM1: single_colour(12);break;
+    case CUSTOM2: single_colour(128);break;
+    case CUSTOM3: single_colour(150);break;
+    case CUSTOM4: single_colour(224);break;
+    case CUSTOM5: single_colour(25);break;
+    case CUSTOM6: single_colour(130);break;
+    case CUSTOM7: single_colour(192);break;
+    case CUSTOM8: single_colour(224);break;
+    case CUSTOM9: single_colour(38);break;
+    case CUSTOM10: single_colour(110);break;
+    case CUSTOM11: single_colour(203);break;
+    case CUSTOM12: single_colour(140);break;
+    case CUSTOM13: single_colour(51);break;
+    case CUSTOM14: single_colour(100);break;
+    case CUSTOM15: single_colour(214);break;
+    case CUSTOM16: single_colour(140);break;
     case FADE: colour_fade();break;
     default: detect_thunder(); reset();break; 
   }
@@ -105,7 +162,7 @@ void loop() {
 // Makes all the LEDs a single colour, see https://raw.githubusercontent.com/FastLED/FastLED/gh-pages/images/HSV-rainbow-with-desc.jpg for H values
 void single_colour(int H){
   for (int i=0;i<NUM_LEDS;i++){
-    leds[i] = CHSV( H, 255, 255);
+    leds[i] = CHSV( H, 255, brightness);
   }
   //avoid flickr which occurs when FastLED.show() is called - only call if the colour changes
   if(lastMode != mode){
@@ -118,7 +175,7 @@ void single_colour(int H){
 void colour_fade(){
   //mood mood lamp that cycles through colours
   for (int i=0;i<NUM_LEDS;i++){
-    leds[i] = CHSV( fade_h, 255, 255);
+    leds[i] = CHSV( fade_h, 255, brightness);
   }
   if(fade_h >254){
     fade_direction = -1; //reverse once we get to 254
@@ -218,7 +275,7 @@ void acid_cloud(){
     //iterate through every LED
     for(int i=0;i<NUM_LEDS;i++){
       if(random(0,100)>90){
-        leds[i] = CHSV( random(0,255), 255, 255); 
+        leds[i] = CHSV( random(0,255), 255, brightness); 
 
       }
       else{
@@ -239,7 +296,7 @@ void rolling(){
     //iterate through every LED
     for(int i=0;i<NUM_LEDS;i++){
       if(random(0,100)>90){
-        leds[i] = CHSV( 0, 0, 255); 
+        leds[i] = CHSV( 0, 0, brightness); 
 
       }
       else{
@@ -257,7 +314,7 @@ void rolling(){
 void crack(){
    //turn everything white briefly
    for(int i=0;i<NUM_LEDS;i++) {
-      leds[i] = CHSV( 0, 0, 255);  
+      leds[i] = CHSV( 0, 0, brightness);  
    }
    FastLED.show();
    delay(random(10,100));
@@ -277,12 +334,12 @@ void thunderburst(){
   for(int r = 0;r<random(3,6);r++){
     
     for(int i=0;i< rl1; i++){
-      leds[i+rs1] = CHSV( 0, 0, 255);
+      leds[i+rs1] = CHSV( 0, 0, brightness);
     }
     
     if(rs2+rl2 < NUM_LEDS){
       for(int i=0;i< rl2; i++){
-        leds[i+rs2] = CHSV( 0, 0, 255);
+        leds[i+rs2] = CHSV( 0, 0, brightness);
       }
     }
     

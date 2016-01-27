@@ -16,11 +16,11 @@ This paragraph must be included in any redistribution.
 
 // Mode enumeration - if you want to add additional party or colour modes, add them here; you'll need to map some IR codes to them later; 
 // and add the modes into the main switch loop
-enum Mode { CLOUD,ACID,OFF,ON,RED,GREEN,BLUE, WHITE,
+enum Mode { CLOUD,ACID,OFF,RED,GREEN,BLUE, WHITE,
             CUSTOM1,CUSTOM2,CUSTOM3,CUSTOM4,CUSTOM5,CUSTOM6,CUSTOM7,CUSTOM8,CUSTOM9,
             CUSTOM10,CUSTOM11,CUSTOM12,CUSTOM13,CUSTOM14,CUSTOM15,CUSTOM16,FADE};
 Mode mode = WHITE;
-Mode lastMode = WHITE;
+Mode lastMode = OFF;
 
 // Mic settings, shouldn't need to adjust these. 
 #define MIC_PIN   0  // Microphone is attached to this analog pin
@@ -67,10 +67,12 @@ void receiveEvent(int bytes) {
       unsigned int received = Wire.read();
       Serial.print("Receiving IR hex: ");
       Serial.println(received,HEX);
-      lastMode = mode;
+      if (mode != OFF) {
+        lastMode = mode;
+      }
       switch(received){
         case 0x7D:
-          mode = ON; brightness=255; break;
+          mode = lastMode; lastMode = OFF; refresh(); break;
         case 0xFD:
           mode = OFF; break;
         case 0x2F:
@@ -80,9 +82,9 @@ void receiveEvent(int bytes) {
         case 0x37:
           mode = FADE; break;
         case 0xC5:
-          brightness += 10;break;
+          brightness += 10;refresh();break;
         case 0x45:
-          brightness -= 10;break;
+          brightness -= 10;refresh();break;
         case 0x5D:
           mode = BLUE; break;
         case 0x65:
@@ -134,8 +136,7 @@ void loop() {
   switch(mode){
     case CLOUD: detect_thunder();off();break;
     case ACID: acid_cloud();off();break;
-    case OFF:off();break;
-    case ON: mode = lastMode;break;
+    case OFF: off();break;
     case RED: single_colour(0);break;
     case BLUE: single_colour(160);break;
     case GREEN: single_colour(96);break;
@@ -276,7 +277,11 @@ void off(){
     leds[i] = CHSV( 0, 0, 0);
   }
   FastLED.show();
-   
+}
+
+void refresh() {
+  FastLED.show();
+  delay(50);
 }
 
 void acid_cloud(){

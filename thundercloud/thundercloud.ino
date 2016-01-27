@@ -16,11 +16,11 @@ This paragraph must be included in any redistribution.
 
 // Mode enumeration - if you want to add additional party or colour modes, add them here; you'll need to map some IR codes to them later; 
 // and add the modes into the main switch loop
-enum Mode { CLOUD,ACID,OFF,ON,RED,GREEN,BLUE,
+enum Mode { CLOUD,ACID,OFF,ON,RED,GREEN,BLUE, WHITE,
             CUSTOM1,CUSTOM2,CUSTOM3,CUSTOM4,CUSTOM5,CUSTOM6,CUSTOM7,CUSTOM8,CUSTOM9,
             CUSTOM10,CUSTOM11,CUSTOM12,CUSTOM13,CUSTOM14,CUSTOM15,CUSTOM16,FADE};
-Mode mode = FADE;  
-Mode lastMode = FADE;
+Mode mode = WHITE;
+Mode lastMode = WHITE;
 
 // Mic settings, shouldn't need to adjust these. 
 #define MIC_PIN   0  // Microphone is attached to this analog pin
@@ -89,6 +89,8 @@ void receiveEvent(int bytes) {
           mode = GREEN; break;
         case 0xE5:
           mode = RED; break;
+        case 0xDD:
+          mode = WHITE; break;
         case 0xD5:
           mode = CUSTOM1; break;
         case 0x55:
@@ -130,13 +132,14 @@ void loop() {
   
   // Maps mode names to code functions. 
   switch(mode){
-    case CLOUD: detect_thunder();reset();break;
-    case ACID: acid_cloud();reset();break;
-    case OFF:reset();break;
+    case CLOUD: detect_thunder();off();break;
+    case ACID: acid_cloud();off();break;
+    case OFF:off();break;
     case ON: mode = lastMode;break;
     case RED: single_colour(0);break;
     case BLUE: single_colour(160);break;
     case GREEN: single_colour(96);break;
+    case WHITE: single_colour(0, 0);break;
     case CUSTOM1: single_colour(12);break;
     case CUSTOM2: single_colour(128);break;
     case CUSTOM3: single_colour(150);break;
@@ -154,15 +157,21 @@ void loop() {
     case CUSTOM15: single_colour(214);break;
     case CUSTOM16: single_colour(140);break;
     case FADE: colour_fade();break;
-    default: detect_thunder(); reset();break; 
+    default: detect_thunder(); off();break;
   }
   
 }
 
 // Makes all the LEDs a single colour, see https://raw.githubusercontent.com/FastLED/FastLED/gh-pages/images/HSV-rainbow-with-desc.jpg for H values
+// This function is useful if you do not need to manipulate the saturation
 void single_colour(int H){
+  single_colour(H, 255);
+}
+
+// For white color, set S (saturation) as 0
+void single_colour(int H, int S){
   for (int i=0;i<NUM_LEDS;i++){
-    leds[i] = CHSV( H, 255, brightness);
+    leds[i] = CHSV( H, S, brightness);
   }
   //avoid flickr which occurs when FastLED.show() is called - only call if the colour changes
   if(lastMode != mode){
@@ -231,7 +240,7 @@ void detect_thunder() {
   average = (total/SAMPLES)+2;
   if(n>average){
     Serial.println("TRIGGERED");
-    reset();
+    off();
      
    
     //I've programmed 3 types of lightning. Each cycle, we pick a random one. 
@@ -262,7 +271,7 @@ void detect_thunder() {
  
  
 // utility function to turn all the lights off.  
-void reset(){
+void off(){
   for (int i=0;i<NUM_LEDS;i++){
     leds[i] = CHSV( 0, 0, 0);
   }
@@ -284,7 +293,7 @@ void acid_cloud(){
     }
     FastLED.show();
     delay(random(5,100));
-    reset();
+    off();
     
   //}
 }
@@ -306,7 +315,7 @@ void rolling(){
     }
     FastLED.show();
     delay(random(5,100));
-    reset();
+    off();
     
   }
 }
@@ -318,7 +327,7 @@ void crack(){
    }
    FastLED.show();
    delay(random(10,100));
-   reset();
+   off();
 }
 
 void thunderburst(){
@@ -347,7 +356,7 @@ void thunderburst(){
     //stay illuminated for a set time
     delay(random(10,50));
     
-    reset();
+    off();
     delay(random(10,50));
   }
   
